@@ -1,90 +1,77 @@
 import numpy as np
 
-# Task a)
-# Implement the gaussian elimination method, to solve the given system of linear equations;
-# Add partial pivoting to increase accuracy and stability of the solution;
-# Return the solution for x.
 def solveLinearSystem(A, b):
-  #print(A)
-  #print(b)
-  #print(A.shape[1])
-  if A.shape[0] != A.shape[1]:
-    print("This solver is not intended to solve systems with asymmetric A's! ")
-    return
+    if A.shape[0] != A.shape[1]:
+        print("This solver is not intended to solve systems with asymmetric A's! ")
+        return
 
-  #if b.shape[0] != A.shape[0] or b.shape[1] != 1:
-  #  print("the provided vector is not valid! ")
-  #  return
-
-  numberOfVariables = b.shape[0]
-
-
-
-  augmentedMatrix = createAugmentedMatrix(A,b)
-
-  augmentedMatrixInEchelonForm = gaussianElimination(augmentedMatrix, numberOfVariables)
-  #print(augmentedMatrixInEchelonForm)
-  solutionVector = backSubstitute(augmentedMatrixInEchelonForm, numberOfVariables)
-  #print(solutionVector)
-  return solutionVector
+    n = b.shape[0]
+    augmentedMatrix = createAugmentedMatrix(A, b)
+    echelonFormedMatrix = gaussianEliminationWithPartialPivoting(augmentedMatrix, n)
+    solutionVector = backSubstitute(echelonFormedMatrix, n)
+    return solutionVector
 
 def createAugmentedMatrix(A, b):
-  #We are going to create the augmented matrix and set the data type to float
-  print(A)
-  print(b)
-  b_reshaped = b.reshape(-1, 1)
-  return np.concatenate((A,b_reshaped),axis=1, dtype=float)
+    b_reshaped = b.reshape(-1, 1)
+    return np.concatenate((A, b_reshaped), axis=1, dtype=float)
 
-def gaussianElimination(augmentedMatrix, numberOfVariables):
-  row = 0
-  while row < numberOfVariables:
-    for entry in range(row +1, numberOfVariables):
-      if abs(augmentedMatrix[row,row]) < abs(augmentedMatrix[entry,row]):
-        augmentedMatrix[[entry,row]] = augmentedMatrix[[row,entry]]
 
-    if augmentedMatrix[row, row] == 0.0:
+def gaussianEliminationWithPartialPivoting(augmentedMatrix, n):
+  current_row = 0
+  while current_row < n:
+    # Find the pivot row (row with the largest absolute value in the current column)
+    pivot_row = current_row
+    for candidate_row in range(current_row + 1, n):
+      if abs(augmentedMatrix[candidate_row, current_row]) > abs(augmentedMatrix[pivot_row, current_row]):
+        pivot_row = candidate_row
+
+    # Swap the current row with the pivot row if needed
+    if pivot_row != current_row:
+      augmentedMatrix[[pivot_row, current_row]] = augmentedMatrix[[current_row, pivot_row]]
+
+    # Check for division by zero error
+    if augmentedMatrix[current_row, current_row] == 0.0:
       raise Exception("Division by 0 error")
 
-    for j in range(row+1, numberOfVariables):
-      scaling_factor = augmentedMatrix[j][row] / augmentedMatrix[row][row]
-      augmentedMatrix[j] = augmentedMatrix[j] - (scaling_factor * augmentedMatrix[row])
-      #print(augmentedMatrix)
+    # Eliminate elements below the pivot element
+    for j in range(current_row + 1, n):
+      scaling_factor = augmentedMatrix[j][current_row] / augmentedMatrix[current_row][current_row]
+      augmentedMatrix[j] = augmentedMatrix[j] - (scaling_factor * augmentedMatrix[current_row])
 
-    row = row + 1
+    current_row += 1
+
   return augmentedMatrix
 
-def backSubstitute(echelonFormedSystem, numberOfVariables):
-  solutionVector = np.zeros(numberOfVariables)
-  solutionVector[numberOfVariables-1] =echelonFormedSystem[numberOfVariables-1][numberOfVariables] / echelonFormedSystem[numberOfVariables-1][numberOfVariables-1]
-  for k in range(numberOfVariables - 2, -1,-1):
-    solutionVector[k] = echelonFormedSystem[k][numberOfVariables]
-    for j in range(k+1,numberOfVariables):
-      solutionVector[k] = solutionVector[k] - echelonFormedSystem[k][j] * solutionVector[j]
-    solutionVector[k] = solutionVector[k] / echelonFormedSystem[k][k]
-  return solutionVector
+def backSubstitute(echelonFormedSystem, n):
+    solutionVector = np.zeros(n)
+    solutionVector[n - 1] = echelonFormedSystem[n - 1][n] / echelonFormedSystem[n - 1][n - 1]
+    for k in range(n - 2, -1, -1):
+        solutionVector[k] = echelonFormedSystem[k][n]
+        for j in range(k + 1, n):
+            solutionVector[k] = solutionVector[k] - echelonFormedSystem[k][j] * solutionVector[j]
+        solutionVector[k] = solutionVector[k] / echelonFormedSystem[k][k]
+    return solutionVector
 
+def isConsistent(A, b):
+    augmentedMatrix = createAugmentedMatrix(A, b)
+    echelonForm = gaussianEliminationWithPartialPivoting(augmentedMatrix, b.shape[0])
+    r = 1e-8
+    for row in echelonForm:
+        if all(abs(val) <= r for val in row[:-1]) and not (abs(row[-1]) <= r):
+            return False
+    return True
 
-
-
-# Task b)
-# Implement a method, checking whether the system is consistent or not;
-# Obviously, you're not allowed to use any method solving that problem for you.
-# Return either true or false
-def isConsistent(A,b):
-  #print(A)
-  return 0
-
-
-# Task c)
-# Implement a method to compute the daily amounts of chicken breast, brown rice, black beans and avocado to eat to achieve the daily nutritional intake described in the exercise;
-# Return a vector x with the grams of chicken breast, brown rice, black beans and avocado to eat each day.
 def solveNutrients():
-  return np.ones(4)
+    A = np.array([[2.5/10, 0.5/10, 1.5/10, 1/10],
+                  [0.1/10, 6.5/10, 3/10, 2/10],
+                  [0.1/10, 0.5/10, 1.5/10,1.5/10 ],
+                  [0.1/10, 0.1/10, 0.5/10, 7/10]])
+    b = np.array([[50],
+                  [180],
+                  [30],
+                  [60]])
+    x = solveLinearSystem(A,b)
+    xRounded = np.round(x)
+    return xRounded
 
-
-b = np.random.randint(1, 81, size=(3, 1))
-A = np.random.randint(1, 81, size=(3, 3))
-#print(A)
-#print(b)
-solveLinearSystem(A,b)
 
